@@ -31,11 +31,21 @@ export default function RootLayout({
         {children}
         <Toaster
           position="top-right"
+          gutter={8}
           toastOptions={{
-            className: '',
-            style: { background: '#111827', color: '#f8fafc', border: '1px solid rgba(255,255,255,0.08)' },
-            success: { className: 'toast-success' },
-            error: { className: 'toast-error' },
+            duration: 4000,
+            style: {
+              background: '#111827',
+              color: '#F1F5F9',
+              border: '1px solid rgba(255,255,255,0.09)',
+              borderRadius: '12px',
+              fontSize: '13px',
+              fontFamily: 'Inter, sans-serif',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+              padding: '12px 16px',
+            },
+            success: { iconTheme: { primary: '#0BB07C', secondary: '#111827' } },
+            error:   { iconTheme: { primary: '#f87171', secondary: '#111827' } },
           }}
         />
       </body>

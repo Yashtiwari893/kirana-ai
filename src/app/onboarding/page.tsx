@@ -4,13 +4,14 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { createBrowserClient } from '@supabase/ssr'
+import { KeyRound, Globe, Smartphone, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react'
 
 export default function OnboardingPage() {
   const [authToken, setAuthToken] = useState('')
   const [originWebsite, setOriginWebsite] = useState('')
   const [phoneId, setPhoneId] = useState('')
   const [loading, setLoading] = useState(false)
-  
+
   const router = useRouter()
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,68 +21,132 @@ export default function OnboardingPage() {
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('Not logged in')
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) throw new Error('Session expired. Please login again')
 
-      // Update shop with 11za creds
       const { error } = await supabase
         .from('shops')
         .update({
           eleven_za_api_key: authToken,
-          origin_website: originWebsite,
           eleven_za_phone_id: phoneId,
-          is_active: true
+          origin_website: originWebsite,
+          updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id)
 
       if (error) throw error
 
-      toast.success('Onboarding complete! Your shop is live! 🚀')
+      toast.success('Setup complete! Dashboard pe milte hain 🎉')
       router.push('/dashboard')
-    } catch (error: any) {
-      toast.error(error.message)
+    } catch (err: any) {
+      toast.error(err.message)
     } finally {
       setLoading(false)
     }
   }
 
+  const steps = [
+    "Login karo 11za.in pe",
+    "WhatsApp number select karo",
+    "Settings → API Credentials",
+    "Neecha diye fields mein paste karo"
+  ]
+
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-navy">
-      <div className="card w-full max-w-md p-8 shadow-2xl animate-fade-in">
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-brand-primary/20 text-brand-primary rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl">⚡</span>
-          </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Connect 11za 🔗</h1>
-          <p className="text-slate-400">Step 2: AI Bot ko WhatsApp se connect karein</p>
+    <div className="auth-page">
+      <div className="mesh-container">
+        <div className="mesh-blob mesh-blob-1" />
+        <div className="mesh-blob mesh-blob-2" />
+        <div className="mesh-blob mesh-blob-3" />
+      </div>
+
+      <div style={{ width: '100%', maxWidth: '520px', zIndex: 10, padding: '20px 0' }}>
+        {/* Logo */}
+        <div className="auth-logo">
+          <div className="auth-logo-icon">🏪</div>
+          <span className="auth-logo-name">Kirana<span>AI</span></span>
         </div>
 
-        <form onSubmit={handleUpdate} className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">11za Auth Token</label>
-            <input type="text" required value={authToken} onChange={e => setAuthToken(e.target.value)} className="form-input w-full" placeholder="token_here..." />
-            <p className="text-[10px] text-slate-500 mt-1">11za Dashboard → Copy API Token</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Origin Website/URL</label>
-            <input type="url" required value={originWebsite} onChange={e => setOriginWebsite(e.target.value)} className="form-input w-full" placeholder="https://kirana-ai.shop" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">11za Phone Number ID</label>
-            <input type="text" required value={phoneId} onChange={e => setPhoneId(e.target.value)} className="form-input w-full" placeholder="ID from Settings..." />
+        <div className="auth-card auth-card-wide">
+          {/* Step Badge */}
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            background: 'rgba(11,176,124,0.1)', border: '1px solid rgba(11,176,124,0.25)',
+            borderRadius: '99px', padding: '4px 14px',
+            fontSize: '11px', fontWeight: 700, color: 'var(--brand-green)',
+            marginBottom: '20px'
+          }}>
+            Step 2 of 2 · 11za WhatsApp Setup
           </div>
 
-          <button type="submit" disabled={loading} className="btn btn-primary w-full py-3 mt-4 text-white font-bold shadow-lg shadow-green-900/40">
-            {loading ? 'Saving Setup...' : 'Finish Setup & Open Dashboard ✨'}
-          </button>
-        </form>
+          <h2 className="auth-heading">Connect WhatsApp API</h2>
+          <p className="auth-subheading">11za dashboard se ye credentials copy karo aur paste karo</p>
 
-        <div className="mt-8 p-4 bg-slate-900/50 rounded-lg border border-slate-800">
-          <p className="text-xs text-slate-400">
-            <strong>💡 Pro Tip:</strong> Testing ke liye aap 11za dashboard se sample phone ID bhi add kar sakte hain.
-          </p>
+          {/* How-to box */}
+          <div style={{
+            background: 'rgba(11,176,124,0.05)', border: '1px solid rgba(11,176,124,0.15)',
+            borderRadius: '12px', padding: '16px', marginBottom: '24px'
+          }}>
+            <p style={{ fontSize: '11.5px', fontWeight: 700, color: 'var(--brand-green)', marginBottom: '10px' }}>
+              🔑 11za se kaise milenge credentials?
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {steps.map((s, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  <CheckCircle2 size={13} style={{ color: 'var(--brand-green)', flexShrink: 0 }} />
+                  {s}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <form onSubmit={handleUpdate}>
+            <div className="field-group">
+              <label className="field-label">11za Auth Token</label>
+              <div className="field-wrap">
+                <KeyRound size={15} className="field-icon" />
+                <input
+                  type="password" required
+                  value={authToken} onChange={e => setAuthToken(e.target.value)}
+                  className="field-input has-icon"
+                  placeholder="Paste your 11za auth token..."
+                />
+              </div>
+            </div>
+
+            <div className="field-group">
+              <label className="field-label">11za Phone Number ID</label>
+              <div className="field-wrap">
+                <Smartphone size={15} className="field-icon" />
+                <input
+                  type="text" required
+                  value={phoneId} onChange={e => setPhoneId(e.target.value)}
+                  className="field-input has-icon"
+                  placeholder="e.g. 919876543210"
+                />
+              </div>
+            </div>
+
+            <div className="field-group">
+              <label className="field-label">Origin Website / App URL</label>
+              <div className="field-wrap">
+                <Globe size={15} className="field-icon" />
+                <input
+                  type="url" required
+                  value={originWebsite} onChange={e => setOriginWebsite(e.target.value)}
+                  className="field-input has-icon"
+                  placeholder="https://yourdomain.com"
+                />
+              </div>
+            </div>
+
+            <button type="submit" disabled={loading} className="btn-primary">
+              {loading
+                ? <><Loader2 size={16} className="animate-spin" /> Connecting...</>
+                : <>Complete Setup & Go to Dashboard <ArrowRight size={16} /></>}
+            </button>
+          </form>
         </div>
       </div>
     </div>

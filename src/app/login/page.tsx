@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { createBrowserClient } from '@supabase/ssr'
-import { Mail, KeyRound, ArrowRight, Loader2, Info } from 'lucide-react'
+import { Mail, Lock, ArrowRight, Loader2, ShieldCheck } from 'lucide-react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  
+
   const router = useRouter()
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,110 +20,107 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email || !password) return toast.error('Kripya details bharein')
-    
+    if (!email || !password) return toast.error('Email aur password dono chahiye')
     setLoading(true)
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
-
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
-      
+
       const { data: shop } = await supabase
         .from('shops')
         .select('eleven_za_phone_id')
         .eq('user_id', data.user.id)
         .single()
 
-      if (!shop?.eleven_za_phone_id) {
-        toast.success('Welcome! Finishing background setup...')
-        router.push('/onboarding')
-      } else {
-        toast.success('Login Successful! 🏪')
-        router.push('/dashboard')
-      }
-    } catch (error: any) {
-      toast.error(error.message)
+      toast.success('Welcome back! 🏪')
+      router.push(shop?.eleven_za_phone_id ? '/dashboard' : '/onboarding')
+    } catch (err: any) {
+      toast.error(err.message)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="auth-container relative overflow-hidden">
-      {/* Mesh Background Components */}
+    <div className="auth-page">
+      {/* Animated Background */}
       <div className="mesh-container">
-        <div className="mesh-gradient" />
-        <div className="mesh-gradient-2" />
-        <div className="absolute inset-0 bg-slate-950/20 backdrop-blur-[2px]" />
+        <div className="mesh-blob mesh-blob-1" />
+        <div className="mesh-blob mesh-blob-2" />
+        <div className="mesh-blob mesh-blob-3" />
       </div>
 
-      <div className="auth-box z-10 animate-fade-in">
-        {/* Branding Logo */}
-        <div className="flex items-center justify-center gap-2 mb-8 group cursor-pointer">
-          <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition-transform">
-            <span className="text-xl">🏪</span>
-          </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">Kirana<span className="text-emerald-500">AI</span></h1>
+      <div style={{ width: '100%', maxWidth: '440px', zIndex: 10 }}>
+        {/* Logo */}
+        <div className="auth-logo">
+          <div className="auth-logo-icon">🏪</div>
+          <span className="auth-logo-name">Kirana<span>AI</span></span>
         </div>
 
-        {/* Login Card */}
-        <div className="glass-card">
-          <div className="mb-6 text-center">
-            <h2 className="text-xl font-bold text-white mb-1">Welcome back</h2>
-            <p className="text-sm text-slate-400">Enter your credentials to manage your store</p>
-          </div>
+        {/* Card */}
+        <div className="auth-card">
+          <h2 className="auth-heading">Welcome back</h2>
+          <p className="auth-subheading">Sign in to manage your WhatsApp store</p>
 
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <label className="label-premium">Email Address</label>
-              <div className="relative">
-                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input 
-                  type="email" required 
-                  value={email} onChange={e => setEmail(e.target.value)} 
-                  className="input-premium pl-12" 
-                  placeholder="name@store.com" 
+          <form onSubmit={handleLogin}>
+            <div className="field-group">
+              <label className="field-label">Email Address</label>
+              <div className="field-wrap">
+                <Mail size={16} className="field-icon" />
+                <input
+                  type="email" required
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="field-input has-icon"
+                  placeholder="you@store.com"
                 />
               </div>
             </div>
 
-            <div>
-              <div className="flex justify-between items-center mb-1">
-                <label className="label-premium m-0">Password</label>
-                <Link href="#" className="text-xs text-emerald-500 hover:text-emerald-400 font-semibold transition-colors">Forgot?</Link>
+            <div className="field-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '7px' }}>
+                <label className="field-label" style={{ marginBottom: 0 }}>Password</label>
+                <Link href="#" style={{ fontSize: '12px', color: 'var(--brand-green)', fontWeight: 600, textDecoration: 'none' }}>
+                  Forgot?
+                </Link>
               </div>
-              <div className="relative">
-                <KeyRound size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input 
-                  type="password" required 
-                  value={password} onChange={e => setPassword(e.target.value)} 
-                  className="input-premium pl-12" 
-                  placeholder="••••••••" 
+              <div className="field-wrap">
+                <Lock size={16} className="field-icon" />
+                <input
+                  type="password" required
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="field-input has-icon"
+                  placeholder="••••••••"
                 />
               </div>
             </div>
 
-            <button type="submit" disabled={loading} className="btn-green mt-2">
-              {loading ? (
-                <div className="flex items-center gap-2"><Loader2 className="animate-spin" size={18} /> Processing...</div>
-              ) : (
-                <>Sign In <ArrowRight size={18} /></>
-              )}
+            <button type="submit" disabled={loading} className="btn-primary">
+              {loading
+                ? <><Loader2 size={16} className="animate-spin" /> Signing in...</>
+                : <>Sign In <ArrowRight size={16} /></>}
             </button>
           </form>
 
-          <p className="mt-8 text-center text-sm text-slate-400">
-            Don't have a shop yet? <Link href="/register" className="text-emerald-500 font-bold hover:text-emerald-400 ml-1 transition-colors underline-offset-4 hover:underline">Register Now</Link>
-          </p>
+          <div style={{
+            marginTop: '24px', paddingTop: '20px',
+            borderTop: '1px solid var(--border-subtle)',
+            textAlign: 'center'
+          }}>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+              New to KiranaAI?{' '}
+              <Link href="/register" style={{ color: 'var(--brand-green)', fontWeight: 700, textDecoration: 'none' }}>
+                Create Account →
+              </Link>
+            </p>
+          </div>
         </div>
 
-        {/* Simple Footer/Info */}
-        <div className="mt-8 flex items-center justify-center gap-2 text-[11px] text-slate-600 font-medium">
-          <Info size={12} />
-          <span>Secure AES-256 encrypted authentication</span>
+        {/* Security Note */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '20px' }}>
+          <ShieldCheck size={13} style={{ color: 'var(--text-muted)' }} />
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>256-bit AES encrypted · Powered by Supabase</span>
         </div>
       </div>
     </div>
