@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient, isSupabaseConfigured } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { sendWhatsAppMessage, formatStatusUpdate } from '@/lib/whatsapp/elevenza'
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  if (!isSupabaseConfigured()) {
-    // Demo mode: just return success
-    const body = await req.json()
-    return NextResponse.json({ data: { id: params.id, ...body, _demo: true } })
-  }
-
   try {
     const supabase = createAdminClient()
     const body = await req.json()
@@ -19,7 +13,7 @@ export async function PATCH(
 
     const { data: order } = await supabase
       .from('orders')
-      .select('*, shops(eleven_za_api_key), customers(whatsapp_number)')
+      .select('*, shops(*), customers(whatsapp_number)')
       .eq('id', params.id)
       .single()
 
@@ -38,11 +32,19 @@ export async function PATCH(
     if (error) throw error
 
     // Auto-notify customer via WhatsApp
-    const apiKey = (order as any).shops?.eleven_za_api_key
+    const shop = (order as any).shops
     const customerPhone = (order as any).customers?.whatsapp_number
-    if (apiKey && customerPhone) {
+    
+    if (shop?.eleven_za_api_key && shop?.origin_website && customerPhone) {
       const statusMsg = formatStatusUpdate(params.id, status, order.total_amount)
-      await sendWhatsAppMessage({ to: customerPhone, message: statusMsg, apiKey })
+      await sendWhatsAppMessage({ 
+        to: customerPhone, 
+        message: statusMsg, 
+        credentials: { 
+          authToken: shop.eleven_za_api_key, 
+          originWebsite: shop.origin_website 
+        } 
+      })
     }
 
     return NextResponse.json({ data })
@@ -55,9 +57,6 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ error: 'Demo mode — connect Supabase' }, { status: 503 })
-  }
   try {
     const supabase = createAdminClient()
     const { data, error } = await supabase

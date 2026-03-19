@@ -1,42 +1,42 @@
 /**
  * 11za WhatsApp API Integration (V2)
- * Based on 11za.in API Documentation
+ * Fully Dynamic - Uses Shop-Specific Credentials from DB
  */
 
 const BASE_URL = 'https://api.11za.in/apis'
-const ORIGIN_WEBSITE = process.env.NEXT_PUBLIC_APP_URL || 'https://kirana-ai.vercel.app'
+
+export interface WhatsAppCredentials {
+  authToken: string
+  originWebsite: string
+}
 
 export interface WhatsAppMessage {
   to: string
   message: string
-  authToken?: string // 11za uses authToken in body
-  phoneId?: string   // Used for multicenter/multitenant lookup
+  credentials: WhatsAppCredentials
 }
 
 /**
  * Send Session Message (Standard Chat)
  * Endpoint: /chat/sendMessage
  */
-export async function sendWhatsAppMessage({ to, message, authToken }: WhatsAppMessage) {
-  const token = authToken || process.env.ELEVEN_ZA_API_KEY
+export async function sendWhatsAppMessage({ to, message, credentials }: WhatsAppMessage) {
+  const { authToken, originWebsite } = credentials
 
-  if (!token) {
-    console.error('[11za] Missing authToken')
-    return { success: false, error: 'Missing authToken' }
+  if (!authToken || !originWebsite) {
+    console.error('[11za] Missing credentials:', { hasToken: !!authToken, hasOrigin: !!originWebsite })
+    return { success: false, error: 'Missing 11za credentials in database' }
   }
 
-  // Format number: Remove +, spaces, and any non-digits
   const cleanNumber = to.replace(/\D/g, '')
 
   try {
     const response = await fetch(`${BASE_URL}/chat/sendMessage`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        authToken: token,
-        originWebsite: ORIGIN_WEBSITE,
+        authToken,
+        originWebsite,
         recipient: cleanNumber,
         message: message,
         type: "text"
@@ -47,7 +47,7 @@ export async function sendWhatsAppMessage({ to, message, authToken }: WhatsAppMe
     if (!response.ok || data.status === 'error') {
       throw new Error(data.message || '11za API Error')
     }
-
+    
     return { success: true, data }
   } catch (error: any) {
     console.error('[11za] Send error:', error.message)
@@ -56,24 +56,21 @@ export async function sendWhatsAppMessage({ to, message, authToken }: WhatsAppMe
 }
 
 /**
- * Send Template Message
- * Endpoint: /template/sendTemplate
+ * Send Template Message (Used for broadcasts)
  */
-export async function sendTemplateMessage({ to, templateName, components, authToken }: any) {
-  const token = authToken || process.env.ELEVEN_ZA_API_KEY
+export async function sendTemplateMessage({ to, templateName, components, credentials }: any) {
+  const { authToken, originWebsite } = credentials
   const cleanNumber = to.replace(/\D/g, '')
 
   try {
     const response = await fetch(`${BASE_URL}/template/sendTemplate`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        authToken: token,
-        originWebsite: ORIGIN_WEBSITE,
+        authToken,
+        originWebsite,
         recipient: cleanNumber,
-        templateName: templateName,
+        templateName,
         components: components || []
       })
     })
@@ -90,13 +87,17 @@ export async function sendTemplateMessage({ to, templateName, components, authTo
  */
 export async function sendBroadcast({ numbers, message, authToken }: { numbers: string[], message: string, authToken: string }) {
   const results = { sent: 0, failed: 0 }
-
+  
   for (const number of numbers) {
-    const res = await sendWhatsAppMessage({ to: number, message, authToken })
+    const res = await sendWhatsAppMessage({ 
+      to: number, 
+      message, 
+      credentials: { authToken, originWebsite: process.env.NEXT_PUBLIC_APP_URL || 'https://kiranaai.vercel.app' } 
+    })
     if (res.success) results.sent++
     else results.failed++
   }
-
+  
   return results
 }
 
@@ -122,7 +123,7 @@ export function formatStatusUpdate(orderId: string, status: string, total: numbe
 
 export function formatCatalogMessage(products: any[]) {
   let msg = `🛒 *Hamara Catalog:*\n\n`
-  const cats = [...new Set(products.map(p => p.category))]
+  const cats = Array.from(new Set(products.map(p => p.category)))
   cats.forEach(c => {
     msg += `*${c}:*\n`
     products.filter(p => p.category === c).forEach(p => msg += `• ${p.name} - ₹${p.price}/${p.unit}\n`)

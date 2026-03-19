@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient, isSupabaseConfigured } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  if (!isSupabaseConfigured()) {
-    const body = await req.json()
-    return NextResponse.json({ data: { id: params.id, ...body, _demo: true } })
-  }
   try {
     const supabase = createAdminClient()
     const body = await req.json()
@@ -18,9 +14,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ success: true, _demo: true })
-  }
   try {
     const supabase = createAdminClient()
     const { error } = await supabase.from('products').update({ is_active: false }).eq('id', params.id)

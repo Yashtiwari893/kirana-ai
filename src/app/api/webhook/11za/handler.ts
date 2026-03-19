@@ -79,8 +79,12 @@ export async function handleIncomingMessage(body: any) {
   // ── STEP 1: Groq fast intent detection ──────────────────────
   const intentResult = await detectIntent(message_text)
   console.log(`[Webhook] ${from} (${shop.shop_name}) → ${intentResult.intent}`)
+  const credentials = {
+    authToken: shop.eleven_za_api_key,
+    originWebsite: shop.origin_website
+  }
 
-  const wpCreds = { authToken: wpToken }
+  const wpParams = { credentials }
 
   switch (intentResult.intent) {
     case 'order': {
@@ -92,22 +96,14 @@ export async function handleIncomingMessage(body: any) {
         .eq('is_active', true)
 
       if (!products?.length) {
-        await sendWhatsAppMessage({ 
-          to: from, 
-          message: 'Hamari shop pe abhi koi products available nahi hain.', 
-          ...wpCreds 
-        })
+        await sendWhatsAppMessage({ to: from, message: 'Hamari shop pe abhi koi products available nahi hain.', ...wpParams })
         return
       }
 
       const parsed = await parseOrderWithMistral(message_text, products)
 
       if (parsed.clarification_needed || !parsed.items.length) {
-        await sendWhatsAppMessage({ 
-          to: from, 
-          message: parsed.clarification_needed || 'Samajh nahi aaya. Please items aur quantity likhein jaise: 2kg aata, 1 litre tel', 
-          ...wpCreds 
-        })
+        await sendWhatsAppMessage({ to: from, message: parsed.clarification_needed || 'Samajh nahi aaya. Please items aur quantity likhein jaise: 2kg aata, 1 litre tel', ...wpParams })
         return
       }
 
@@ -130,11 +126,7 @@ export async function handleIncomingMessage(body: any) {
         .single()
 
       if (!order) {
-        await sendWhatsAppMessage({ 
-          to: from, 
-          message: 'Order save mein error. Please dobara try karein.', 
-          ...wpCreds 
-        })
+        await sendWhatsAppMessage({ to: from, message: 'Order save mein error. Please dobara try karein.', ...wpParams })
         return
       }
 
@@ -152,7 +144,7 @@ export async function handleIncomingMessage(body: any) {
 
       // ── STEP 4: Send confirmation ──────────────────────
       const confirmMsg = formatOrderConfirmation(orderItems, totalAmount, order.id)
-      await sendWhatsAppMessage({ to: from, message: confirmMsg, ...wpCreds })
+      await sendWhatsAppMessage({ to: from, message: confirmMsg, ...wpParams })
       break
     }
 
@@ -165,7 +157,7 @@ export async function handleIncomingMessage(body: any) {
         .order('category')
 
       const msg = products?.length ? formatCatalogMessage(products) : 'Abhi koi product available nahi hai.'
-      await sendWhatsAppMessage({ to: from, message: msg, ...wpCreds })
+      await sendWhatsAppMessage({ to: from, message: msg, ...wpParams })
       break
     }
 
@@ -182,7 +174,7 @@ export async function handleIncomingMessage(body: any) {
       const msg = lastOrder 
         ? formatStatusUpdate(lastOrder.id, lastOrder.status, lastOrder.total_amount)
         : 'Aapka koi order nahi mila. Order karne ke liye items ki list likhein!'
-      await sendWhatsAppMessage({ to: from, message: msg, ...wpCreds })
+      await sendWhatsAppMessage({ to: from, message: msg, ...wpParams })
       break
     }
 
@@ -191,7 +183,7 @@ export async function handleIncomingMessage(body: any) {
       await sendWhatsAppMessage({ 
         to: from, 
         message: shop.bot_greeting || 'Namaste! Main KiranaAI bot hoon. Order ke liye items likhein jaise: 2kg aata, 1 litre tel\n\n"list" likhein catalog dekhne ke liye.', 
-        ...wpCreds 
+        ...wpParams 
       })
   }
 }

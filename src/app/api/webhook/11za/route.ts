@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient, isSupabaseConfigured } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 
 /**
  * GET - WhatsApp Webhook Verification
@@ -11,7 +11,6 @@ export async function GET(req: NextRequest) {
   const token = searchParams.get('hub.verify_token')
   const challenge = searchParams.get('hub.challenge')
 
-  // verify_token should match your secret
   const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN || 'kirana_ai_secret'
 
   if (mode === 'subscribe' && token === verifyToken) {
@@ -27,17 +26,9 @@ export async function GET(req: NextRequest) {
  * POST - Incoming WhatsApp Events
  */
 export async function POST(req: NextRequest) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({ 
-      status: 'demo', 
-      message: 'Demo mode — connect Supabase to process real orders.' 
-    })
-  }
-
   try {
     const body = await req.json()
     
-    // Dynamically import logic to avoid top-level env issues
     const { handleIncomingMessage } = await import('./handler')
     await handleIncomingMessage(body)
     

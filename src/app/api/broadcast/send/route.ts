@@ -1,16 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient, isSupabaseConfigured } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { sendBroadcast } from '@/lib/whatsapp/elevenza'
 
 export async function POST(req: NextRequest) {
-  if (!isSupabaseConfigured()) {
-    return NextResponse.json({
-      sent: 0, failed: 0, total: 0,
-      message: 'Demo mode — configure Supabase + 11za to send real broadcasts',
-      _demo: true,
-    })
-  }
-
   try {
     const supabase = createAdminClient()
     const body = await req.json()
@@ -26,12 +18,12 @@ export async function POST(req: NextRequest) {
 
     const { data: shop } = await supabase
       .from('shops')
-      .select('eleven_za_api_key')
+      .select('eleven_za_api_key, origin_website')
       .eq('id', shop_id)
       .single()
 
-    if (!shop?.eleven_za_api_key) {
-      return NextResponse.json({ error: '11za API key not configured' }, { status: 400 })
+    if (!shop?.eleven_za_api_key || !shop?.origin_website) {
+      return NextResponse.json({ error: '11za credentials not configured for this shop' }, { status: 400 })
     }
 
     let query = supabase.from('customers').select('whatsapp_number').eq('shop_id', shop_id)
@@ -48,12 +40,16 @@ export async function POST(req: NextRequest) {
     const result = await sendBroadcast({
       numbers,
       message: broadcast.message_text,
-      apiKey: shop.eleven_za_api_key,
+      authToken: shop.eleven_za_api_key
     })
 
     await supabase
       .from('broadcasts')
-      .update({ sent_count: result.sent, sent_at: new Date().toISOString(), status: result.sent > 0 ? 'sent' : 'failed' })
+      .update({ 
+        sent_count: result.sent, 
+        sent_at: new Date().toISOString(), 
+        status: result.sent > 0 ? 'sent' : 'failed' 
+      })
       .eq('id', broadcast_id)
 
     return NextResponse.json({ ...result, total: numbers.length })

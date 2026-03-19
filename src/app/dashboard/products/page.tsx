@@ -115,7 +115,7 @@ export default function ProductsPage() {
     return matchCat && matchSearch
   })
 
-  const categories = [...new Set(products.map(p => p.category))]
+  const categories = Array.from(new Set(products.map(p => p.category)))
   const lowStockCount = products.filter(p => p.stock_qty <= p.reorder_level && p.is_active).length
 
   return (

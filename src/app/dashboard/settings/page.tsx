@@ -1,28 +1,95 @@
 'use client'
 
-import { useState } from 'react'
-import { Save, Eye, EyeOff, RefreshCw, CheckCircle2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Save, Eye, EyeOff, RefreshCw, Smartphone, Globe, Shield } from 'lucide-react'
+import { createBrowserClient } from '@supabase/ssr'
 import toast from 'react-hot-toast'
 
 export default function SettingsPage() {
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [showApiKey, setShowApiKey] = useState(false)
+  const [shopId, setShopId] = useState<string | null>(null)
+  
   const [form, setForm] = useState({
-    shop_name: 'Sharma Kirana Store',
-    owner_name: 'Ramesh Sharma',
-    whatsapp_number: '+91 98765 43210',
+    shop_name: '',
+    whatsapp_number: '',
     eleven_za_api_key: '',
-    working_hours_start: '09:00',
-    working_hours_end: '21:00',
-    bot_greeting: 'Namaste! Main aapka kirana bot hoon. Order ke liye item aur quantity likhein jaise: 2kg aata, 1 litre tel',
+    eleven_za_phone_id: '',
+    origin_website: '',
+    bot_greeting: '',
+    working_hours: { start: '09:00', end: '21:00' }
   })
 
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  useEffect(() => {
+    fetchSettings()
+  }, [])
+
+  const fetchSettings = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('shops')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+
+      if (error) throw error
+      if (data) {
+        setShopId(data.id)
+        setForm({
+          shop_name: data.shop_name || '',
+          whatsapp_number: data.whatsapp_number || '',
+          eleven_za_api_key: data.eleven_za_api_key || '',
+          eleven_za_phone_id: data.eleven_za_phone_id || '',
+          origin_website: data.origin_website || '',
+          bot_greeting: data.bot_greeting || '',
+          working_hours: data.working_hours || { start: '09:00', end: '21:00' }
+        })
+      }
+    } catch (e: any) {
+      toast.error('Failed to load settings')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const save = async () => {
+    if (!shopId) return
     setSaving(true)
-    setTimeout(() => {
+    try {
+      const { error } = await supabase
+        .from('shops')
+        .update({
+          shop_name: form.shop_name,
+          whatsapp_number: form.whatsapp_number,
+          eleven_za_api_key: form.eleven_za_api_key,
+          eleven_za_phone_id: form.eleven_za_phone_id,
+          origin_website: form.origin_website,
+          bot_greeting: form.bot_greeting,
+          working_hours: form.working_hours,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', shopId)
+
+      if (error) throw error
+      toast.success('Settings updated successfully! ✅')
+    } catch (e: any) {
+      toast.error(e.message)
+    } finally {
       setSaving(false)
-      toast.success('Settings save ho gayi! ✅')
-    }, 1000)
+    }
+  }
+
+  if (loading) {
+    return <div className="flex items-center justify-center p-20"><RefreshCw className="animate-spin text-brand-primary" /></div>
   }
 
   return (
@@ -30,64 +97,60 @@ export default function SettingsPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Settings ⚙️</h1>
-          <p className="page-subtitle">Shop configuration aur bot customize karo</p>
+          <p className="page-subtitle">Shop configuration aur 11za credentials manage karo</p>
         </div>
         <button onClick={save} disabled={saving} className="btn btn-primary">
-          {saving ? <><RefreshCw size={14} className="animate-spin" /> Saving...</> : <><Save size={14} /> Save Changes</>}
+          {saving ? <RefreshCw size={14} className="animate-spin mr-2" /> : <Save size={14} className="mr-2" />}
+          {saving ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
 
       <div className="two-col" style={{ alignItems: 'flex-start', gap: '1.5rem' }}>
-        {/* Shop Info */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Shop Basic Info */}
           <div className="card card-padding">
-            <h3 style={{ fontWeight: 700, marginBottom: '1.25rem', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🏪 Shop Information</h3>
+            <h3 style={{ fontWeight: 700, marginBottom: '1.25rem', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🏪 Shop Profile</h3>
             <div className="form-group">
               <label className="form-label">Shop Name</label>
               <input type="text" className="form-input" value={form.shop_name} onChange={e => setForm(p => ({ ...p, shop_name: e.target.value }))} />
             </div>
             <div className="form-group">
-              <label className="form-label">Owner Name</label>
-              <input type="text" className="form-input" value={form.owner_name} onChange={e => setForm(p => ({ ...p, owner_name: e.target.value }))} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Shop WhatsApp Number</label>
+              <label className="form-label">WhatsApp (Business Number)</label>
               <input type="text" className="form-input" value={form.whatsapp_number} onChange={e => setForm(p => ({ ...p, whatsapp_number: e.target.value }))} />
             </div>
           </div>
 
           {/* Working Hours */}
           <div className="card card-padding">
-            <h3 style={{ fontWeight: 700, marginBottom: '1.25rem', fontSize: '0.95rem' }}>⏰ Working Hours</h3>
+            <h3 style={{ fontWeight: 700, marginBottom: '1.25rem', fontSize: '0.95rem' }}>⏰ Store Timing</h3>
             <div className="two-col" style={{ gap: '1rem' }}>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Opening Time</label>
-                <input type="time" className="form-input" value={form.working_hours_start} onChange={e => setForm(p => ({ ...p, working_hours_start: e.target.value }))} />
+                <label className="form-label">Opening</label>
+                <input type="time" className="form-input" value={form.working_hours.start} onChange={e => setForm(p => ({ ...p, working_hours: { ...p.working_hours, start: e.target.value } }))} />
               </div>
               <div className="form-group" style={{ marginBottom: 0 }}>
-                <label className="form-label">Closing Time</label>
-                <input type="time" className="form-input" value={form.working_hours_end} onChange={e => setForm(p => ({ ...p, working_hours_end: e.target.value }))} />
+                <label className="form-label">Closing</label>
+                <input type="time" className="form-input" value={form.working_hours.end} onChange={e => setForm(p => ({ ...p, working_hours: { ...p.working_hours, end: e.target.value } }))} />
               </div>
             </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.75rem' }}>Bot is timing ke baad order accept nahi karega</p>
           </div>
         </div>
 
-        {/* API + Bot */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {/* 11za API */}
-          <div className="card card-padding">
-            <h3 style={{ fontWeight: 700, marginBottom: '0.5rem', fontSize: '0.95rem' }}>📱 11za WhatsApp API</h3>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
-              11za.in se API key lo aur yahan paste karo
-            </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* 11za Credentials Section */}
+          <div className="card card-padding" style={{ border: '1px solid rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.05)' }}>
+            <div className="flex items-center gap-2 mb-4">
+              <Shield size={18} className="text-blue-400" />
+              <h3 style={{ fontWeight: 700, fontSize: '1rem' }}>11za Credentials</h3>
+            </div>
+            
             <div className="form-group">
-              <label className="form-label">11za API Key</label>
+              <label className="form-label">11za Auth Token</label>
               <div style={{ position: 'relative' }}>
                 <input
                   type={showApiKey ? 'text' : 'password'}
                   className="form-input"
-                  placeholder="sk-11za-xxxxxxxxxxxxxxxx"
+                  placeholder="Paste 11za authToken here"
                   value={form.eleven_za_api_key}
                   onChange={e => setForm(p => ({ ...p, eleven_za_api_key: e.target.value }))}
                   style={{ paddingRight: '2.5rem' }}
@@ -98,59 +161,33 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Webhook URL */}
             <div className="form-group">
-              <label className="form-label">Webhook URL (11za mein set karo yeh)</label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={`${typeof window !== 'undefined' ? window.location.origin : 'https://your-app.vercel.app'}/api/webhook/11za`}
-                  readOnly
-                  style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#4ade80' }}
-                />
-                <button
-                  onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/api/webhook/11za`); toast.success('Copied!') }}
-                  className="btn btn-secondary btn-sm"
-                >
-                  Copy
-                </button>
+              <label className="form-label">11za Phone Number ID</label>
+              <div style={{ position: 'relative' }}>
+                <Smartphone size={14} style={{ position: 'absolute', left: '0.8rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input type="text" className="form-input pl-8" placeholder="Phone Number ID" value={form.eleven_za_phone_id} onChange={e => setForm(p => ({ ...p, eleven_za_phone_id: e.target.value }))} style={{ paddingLeft: '2.4rem' }} />
               </div>
             </div>
 
-            <div style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.15)', borderRadius: '10px', padding: '0.875rem' }}>
-              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#4ade80', marginBottom: '0.4rem' }}>✅ Setup Steps:</div>
-              <ol style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', paddingLeft: '1rem', lineHeight: 2 }}>
-                <li>11za.in pe account banao</li>
-                <li>WhatsApp instance connect karo</li>
-                <li>API Key copy karo aur yahan paste karo</li>
-                <li>Webhook URL 11za dashboard mein set karo</li>
-                <li>Test order bhejo!</li>
-              </ol>
+            <div className="form-group">
+              <label className="form-label">Origin Website</label>
+              <div style={{ position: 'relative' }}>
+                <Globe size={14} style={{ position: 'absolute', left: '0.8rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input type="text" className="form-input pl-8" placeholder="https://yourpage.com" value={form.origin_website} onChange={e => setForm(p => ({ ...p, origin_website: e.target.value }))} style={{ paddingLeft: '2.4rem' }} />
+              </div>
             </div>
           </div>
 
           {/* Bot Greeting */}
           <div className="card card-padding">
-            <h3 style={{ fontWeight: 700, marginBottom: '0.5rem', fontSize: '0.95rem' }}>🤖 Bot Customize</h3>
-            <div className="form-group">
-              <label className="form-label">Welcome Message</label>
-              <textarea
-                className="form-textarea"
-                value={form.bot_greeting}
-                onChange={e => setForm(p => ({ ...p, bot_greeting: e.target.value }))}
-                style={{ minHeight: '100px' }}
-              />
-              <small style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Jab customer pehli baar message kare ya "hi" likhe</small>
-            </div>
-
-            {/* Preview */}
-            <div style={{ background: '#0b1f0f', border: '1px solid rgba(34,197,94,0.15)', borderRadius: '12px', padding: '1rem' }}>
-              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>📱 WhatsApp Preview</div>
-              <div style={{ background: '#1a3520', borderRadius: '10px 10px 10px 2px', padding: '0.75rem', fontSize: '0.8rem', color: '#e2f8e8', lineHeight: 1.6 }}>
-                {form.bot_greeting}
-              </div>
-            </div>
+            <h3 style={{ fontWeight: 700, marginBottom: '1.25rem', fontSize: '0.95rem' }}>🤖 Bot Welcome Greeting</h3>
+            <textarea
+              className="form-textarea"
+              value={form.bot_greeting}
+              onChange={e => setForm(p => ({ ...p, bot_greeting: e.target.value }))}
+              style={{ minHeight: '120px' }}
+              placeholder="Namaste! Order ke liye items likhein..."
+            />
           </div>
         </div>
       </div>

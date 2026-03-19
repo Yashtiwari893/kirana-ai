@@ -9,18 +9,18 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ════════════════════════════════════════
 CREATE TABLE IF NOT EXISTS shops (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  owner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  owner_name TEXT NOT NULL,
+  user_id UUID REFERENCES auth.users(id) NOT NULL, -- SUPER IMPORTANT: Owner of the shop
   shop_name TEXT NOT NULL,
-  whatsapp_number TEXT UNIQUE NOT NULL,
+  whatsapp_number TEXT,
+  logo_url TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
   eleven_za_api_key TEXT,
-  plan TEXT DEFAULT 'free' CHECK (plan IN ('free', 'basic', 'pro')),
-  working_hours_start TEXT DEFAULT '09:00',
-  working_hours_end TEXT DEFAULT '21:00',
+  eleven_za_phone_id TEXT,
+  origin_website TEXT, -- NEW: Each shop has its own originWebsite
   bot_greeting TEXT DEFAULT 'Namaste! Main aapka kirana bot hoon. Order ke liye item aur quantity likhein jaise: 2kg aata, 1 litre tel',
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  working_hours JSONB DEFAULT '{"start": "09:00", "end": "21:00"}'::JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ════════════════════════════════════════
