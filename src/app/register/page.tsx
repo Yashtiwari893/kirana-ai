@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { createBrowserClient } from '@supabase/ssr'
+import { User, Mail, Lock, Store, Phone, ArrowUpRight, Loader2, Sparkles } from 'lucide-react'
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('')
@@ -25,19 +26,15 @@ export default function RegisterPage() {
     setLoading(true)
 
     try {
-      // 1. Sign up user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: { full_name: fullName }
-        }
+        options: { data: { full_name: fullName } }
       })
 
       if (authError) throw authError
-      if (!authData.user) throw new Error('Signup failed')
+      if (!authData.user) throw new Error('Registration error')
 
-      // 2. Create shop record
       const { error: shopError } = await supabase.from('shops').insert({
         user_id: authData.user.id,
         shop_name: shopName,
@@ -47,7 +44,7 @@ export default function RegisterPage() {
 
       if (shopError) throw shopError
 
-      toast.success('Registration successful! Please complete onboarding.')
+      toast.success('Account Created! Welcome 🎉')
       router.push('/onboarding')
     } catch (error: any) {
       toast.error(error.message)
@@ -57,43 +54,85 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-navy">
-      <div className="card w-full max-w-md p-8 shadow-2xl">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">KiranaAI 🛍️</h1>
-          <p className="text-slate-400">Store register karein aur AI bot start karein</p>
+    <div className="auth-container relative overflow-hidden">
+      {/* Mesh Background Components */}
+      <div className="mesh-container">
+        <div className="mesh-gradient" />
+        <div className="mesh-gradient-2" />
+        <div className="absolute inset-0 bg-slate-950/20 backdrop-blur-[2px]" />
+      </div>
+
+      <div className="auth-box max-w-[550px] z-10 animate-fade-in py-10">
+        <div className="flex items-center justify-center gap-2 mb-8 group cursor-pointer">
+          <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20 group-hover:scale-110 transition-transform">
+            <span className="text-xl">🏪</span>
+          </div>
+          <h1 className="text-2xl font-black text-white tracking-tight">Kirana<span className="text-emerald-500">AI</span></h1>
         </div>
 
-        <form onSubmit={handleRegister} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Full Name</label>
-            <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)} className="form-input w-full" placeholder="Ramesh Kumar" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Shop Name</label>
-            <input type="text" required value={shopName} onChange={e => setShopName(e.target.value)} className="form-input w-full" placeholder="Ramesh General Store" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Business WhatsApp Number</label>
-            <input type="text" required value={whatsapp} onChange={e => setWhatsapp(e.target.value)} className="form-input w-full" placeholder="919876543210" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Email</label>
-            <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="form-input w-full" placeholder="ramesh@example.com" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">Password</label>
-            <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="form-input w-full" placeholder="••••••••" />
+        <div className="glass-card">
+          <div className="mb-8 text-center flex flex-col items-center">
+            <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20 text-[10px] font-bold text-emerald-400 mb-4 animate-pulse">
+              <Sparkles size={10} /> PHASE 1 EARLY ACCESS
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-2">Create Store Account</h2>
+            <p className="text-sm text-slate-400 max-w-[300px]">Join 500+ Indian shops using AI to automate growth</p>
           </div>
 
-          <button type="submit" disabled={loading} className="btn btn-primary w-full py-3 mt-4">
-            {loading ? 'Creating Account...' : 'Register & Continue'}
-          </button>
-        </form>
+          <form onSubmit={handleRegister} className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-5">
+            <div className="md:col-span-2 space-y-2">
+              <label className="label-premium">Proprietor Name</label>
+              <div className="relative">
+                <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input type="text" required value={fullName} onChange={e => setFullName(e.target.value)} className="input-premium pl-12" placeholder="Harshvardhan Singh" />
+              </div>
+            </div>
 
-        <p className="text-center mt-6 text-slate-400 text-sm">
-          Already have an account? <Link href="/login" className="text-brand-primary hover:underline">Login here</Link>
-        </p>
+            <div className="md:col-span-1 space-y-2">
+              <label className="label-premium">Shop Name</label>
+              <div className="relative">
+                <Store size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input type="text" required value={shopName} onChange={e => setShopName(e.target.value)} className="input-premium pl-12" placeholder="Agrawal Store" />
+              </div>
+            </div>
+
+            <div className="md:col-span-1 space-y-2">
+              <label className="label-premium">WhatsApp No.</label>
+              <div className="relative">
+                <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input type="text" required value={whatsapp} onChange={e => setWhatsapp(e.target.value)} className="input-premium pl-12" placeholder="91987..." />
+              </div>
+            </div>
+
+            <div className="md:col-span-2 space-y-2">
+              <label className="label-premium">Business Email Address</label>
+              <div className="relative">
+                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="input-premium pl-12" placeholder="owner@store.com" />
+              </div>
+            </div>
+
+            <div className="md:col-span-2 space-y-2">
+              <label className="label-premium">Set Password</label>
+              <div className="relative">
+                <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input type="password" required value={password} onChange={e => setPassword(e.target.value)} className="input-premium pl-12" placeholder="••••••••" />
+              </div>
+            </div>
+
+            <div className="md:col-span-2 mt-4">
+              <button type="submit" disabled={loading} className="btn-green py-4">
+                {loading ? <div className="flex items-center gap-2"><Loader2 className="animate-spin" size={18} /> Building your store...</div> : <>Get Started <ArrowUpRight size={18} /></>}
+              </button>
+            </div>
+          </form>
+
+          <footer className="mt-8 text-center border-t border-slate-800 pt-6">
+            <p className="text-slate-500 text-xs">
+              Already have an account? <Link href="/login" className="text-emerald-500 font-bold hover:underline underline-offset-4 ml-1">Sign In</Link>
+            </p>
+          </footer>
+        </div>
       </div>
     </div>
   )

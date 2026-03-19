@@ -9,14 +9,14 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ════════════════════════════════════════
 CREATE TABLE IF NOT EXISTS shops (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  user_id UUID REFERENCES auth.users(id) NOT NULL, -- SUPER IMPORTANT: Owner of the shop
+  user_id UUID REFERENCES auth.users(id) NOT NULL, -- Owner of the shop
   shop_name TEXT NOT NULL,
   whatsapp_number TEXT,
   logo_url TEXT,
   is_active BOOLEAN DEFAULT TRUE,
   eleven_za_api_key TEXT,
   eleven_za_phone_id TEXT,
-  origin_website TEXT, -- NEW: Each shop has its own originWebsite
+  origin_website TEXT, 
   bot_greeting TEXT DEFAULT 'Namaste! Main aapka kirana bot hoon. Order ke liye item aur quantity likhein jaise: 2kg aata, 1 litre tel',
   working_hours JSONB DEFAULT '{"start": "09:00", "end": "21:00"}'::JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -113,32 +113,35 @@ ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE broadcasts ENABLE ROW LEVEL SECURITY;
 
--- Shops: Owner can only see their own shop
-CREATE POLICY "Owners can manage their shop" ON shops
-  FOR ALL USING (auth.uid() = owner_id);
+-- Shops Policies (Critical: Add INSERT policy for registration)
+CREATE POLICY "Enable insert for authenticated users only" ON shops
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Owners can view/update their shop" ON shops
+  FOR ALL USING (auth.uid() = user_id);
 
 -- Products: Shop owner can manage their products
 CREATE POLICY "Shop owners manage products" ON products
   FOR ALL USING (
-    shop_id IN (SELECT id FROM shops WHERE owner_id = auth.uid())
+    shop_id IN (SELECT id FROM shops WHERE user_id = auth.uid())
   );
 
 -- Customers: Shop owner can see their customers
 CREATE POLICY "Shop owners manage customers" ON customers
   FOR ALL USING (
-    shop_id IN (SELECT id FROM shops WHERE owner_id = auth.uid())
+    shop_id IN (SELECT id FROM shops WHERE user_id = auth.uid())
   );
 
 -- Orders: Shop owner can manage their orders
 CREATE POLICY "Shop owners manage orders" ON orders
   FOR ALL USING (
-    shop_id IN (SELECT id FROM shops WHERE owner_id = auth.uid())
+    shop_id IN (SELECT id FROM shops WHERE user_id = auth.uid())
   );
 
 -- Broadcasts: Shop owner can manage their broadcasts
 CREATE POLICY "Shop owners manage broadcasts" ON broadcasts
   FOR ALL USING (
-    shop_id IN (SELECT id FROM shops WHERE owner_id = auth.uid())
+    shop_id IN (SELECT id FROM shops WHERE user_id = auth.uid())
   );
 
 -- ════════════════════════════════════════
