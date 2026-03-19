@@ -24,24 +24,39 @@ export default function RegisterPage() {
     e.preventDefault()
     setLoading(true)
     try {
+      // Step 1: Create Auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
         options: { data: { full_name: form.fullName } }
       })
       if (authError) throw authError
-      if (!authData.user) throw new Error('Registration failed')
+      if (!authData.user) throw new Error('Registration failed — please try again')
 
-      const { error: shopError } = await supabase.from('shops').insert({
-        user_id: authData.user.id,
-        shop_name: form.shopName,
-        whatsapp_number: form.whatsapp,
-        is_active: true
+      // Step 2: Create shop via API route (uses admin/service role, bypasses RLS)
+      // This handles the case where email confirmation is enabled and session is null
+      const shopRes = await fetch('/api/register-shop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: authData.user.id,
+          shop_name: form.shopName,
+          whatsapp_number: form.whatsapp,
+        })
       })
-      if (shopError) throw shopError
+      const shopData = await shopRes.json()
+      if (!shopRes.ok) throw new Error(shopData.error || 'Shop creation failed')
 
-      toast.success('Account created! Setup karein 🚀')
-      router.push('/onboarding')
+      toast.success('Account created! Ab setup complete karein 🚀')
+      
+      // If email confirmation is OFF, session exists → go to onboarding
+      // If email confirmation is ON, user needs to verify first
+      if (authData.session) {
+        router.push('/onboarding')
+      } else {
+        toast('📧 Please check your email to confirm your account first!', { duration: 6000 })
+        router.push('/login')
+      }
     } catch (err: any) {
       toast.error(err.message)
     } finally {
