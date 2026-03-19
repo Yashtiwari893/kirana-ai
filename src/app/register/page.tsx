@@ -41,6 +41,7 @@ export default function RegisterPage() {
         body: JSON.stringify({
           user_id: authData.user.id,
           shop_name: form.shopName,
+          owner_name: form.fullName,
           whatsapp_number: form.whatsapp,
         })
       })

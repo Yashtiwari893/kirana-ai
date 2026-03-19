@@ -3,10 +3,10 @@ import { createAdminClient } from '@/lib/supabase/server'
 
 export async function POST(req: NextRequest) {
   try {
-    const { user_id, shop_name, whatsapp_number } = await req.json()
+    const { user_id, shop_name, whatsapp_number, owner_name } = await req.json()
 
-    if (!user_id || !shop_name) {
-      return NextResponse.json({ error: 'user_id and shop_name are required' }, { status: 400 })
+    if (!user_id || !shop_name || !owner_name) {
+      return NextResponse.json({ error: 'user_id, shop_name, and owner_name are required' }, { status: 400 })
     }
 
     // Use admin client — bypasses RLS so shop can be created even before email confirmation
@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
       .insert({
         user_id,
         shop_name,
+        owner_name,
         whatsapp_number: whatsapp_number || '',
         is_active: true,
       })
